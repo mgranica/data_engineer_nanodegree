@@ -1,6 +1,7 @@
 import pandas as pd
 import boto3
 import json
+import time
 import configparser
 import os
 from botocore.exceptions import ClientError
@@ -24,7 +25,7 @@ def load_dwh_params():
     DB_PASSWORD           = config.get("CLUSTER","DB_PASSWORD")
     DB_PORT               = config.get("CLUSTER","DB_PORT")
     DB_IAM_ROLE_NAME      = config.get("CLUSTER", "DB_IAM_ROLE_NAME")
-    REGION_NAME           = config.get("CLUSTER", "DB_IAM_ROLE_NAME")
+    REGION_NAME           = config.get("CLUSTER", "REGION_NAME")
     
     return KEY, SECRET, DB_CLUSTER_TYPE, DB_NUM_NODES, DB_NODE_TYPE, DB_CLUSTER_IDENTIFIER, DB_NAME, DB_USER, DB_PASSWORD, DB_PORT, DB_IAM_ROLE_NAME, REGION_NAME
 
@@ -72,8 +73,13 @@ def create_iam_role(iam, DB_IAM_ROLE_NAME: str):
         )
     except Exception as e:
         print(e)
+    print("Attaching Policy")
+    iam.attach_role_policy(RoleName=DB_IAM_ROLE_NAME,
+                       PolicyArn="arn:aws:iam::aws:policy/AmazonS3ReadOnlyAccess"
+                      )['ResponseMetadata']['HTTPStatusCode']
     print("Get the IAM role ARN")
     roleArn = iam.get_role(RoleName=DB_IAM_ROLE_NAME)['Role']['Arn']
+    print("IamRole ARN extraction: done")
     return roleArn
 
 def create_redshift_cluster(
@@ -82,6 +88,7 @@ def create_redshift_cluster(
     DB_NODE_TYPE,
     DB_NUM_NODES,
     DB_CLUSTER_IDENTIFIER,
+    DB_NAME,
     DB_USER,
     DB_PASSWORD,
     roleArn
@@ -105,12 +112,13 @@ def create_redshift_cluster(
         print("Redshift Cluster creaded correctly.")
     except Exception as e:
         print(e)
-    condition: True
+    condition= True
     while condition:
+        time.sleep(10)
         myClusterProps = redshift.describe_clusters(ClusterIdentifier=DB_CLUSTER_IDENTIFIER)['Clusters'][0]
-        cluster_status = myClusterProps
+        cluster_status = myClusterProps['ClusterStatus']
+        print(f"Cluster status: {cluster_status}")
         if cluster_status == "available":
-            print(f"Cluster status: {cluster_status}")
             DB_ENDPOINT = myClusterProps['Endpoint']['Address']
             DB_ROLE_ARN = myClusterProps['IamRoles'][0]['IamRoleArn']
             return myClusterProps, DB_ENDPOINT, DB_ROLE_ARN
@@ -136,6 +144,7 @@ def cluster_connection(DB_USER, DB_PASSWORD, DB_ENDPOINT, DB_PORT, DB_NAME):
     print("check cluster connection")
     conn_string="postgresql://{}:{}@{}:{}/{}".format(DB_USER, DB_PASSWORD, DB_ENDPOINT, DB_PORT, DB_NAME)
     print(conn_string)
+    return conn_string
         
 
 
@@ -147,13 +156,12 @@ def main():
     
     roleArn = create_iam_role(iam, DB_IAM_ROLE_NAME)
     
-    myClusterProps, DB_ENDPOINT, DB_ROLE_ARN = create_redshift_cluster(redshift, DB_CLUSTER_TYPE, DB_NODE_TYPE,DB_NUM_NODES, DB_CLUSTER_IDENTIFIER, DB_USER, DB_PASSWORD, roleArn)
+    myClusterProps, DB_ENDPOINT, DB_ROLE_ARN = create_redshift_cluster(redshift, DB_CLUSTER_TYPE, DB_NODE_TYPE, DB_NUM_NODES, DB_CLUSTER_IDENTIFIER, DB_NAME, DB_USER, DB_PASSWORD, roleArn)
     open_TCP(ec2, myClusterProps, DB_PORT)
     
-    cluster_connection(DB_USER, DB_PASSWORD, DB_ENDPOINT, DB_PORT, DB_NAME)
+    conn = cluster_connection(DB_USER, DB_PASSWORD, DB_ENDPOINT, DB_PORT, DB_NAME)
+    
   
 if __name__ == "__main__":
     main()
-    
-    
-    
+

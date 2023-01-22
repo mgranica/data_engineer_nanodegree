@@ -2,7 +2,8 @@ import configparser
 import psycopg2
 import os
 from sql_queries import copy_table_queries, insert_table_queries
-
+import boto3
+import json
 
 def load_staging_tables(cur, conn):
     for query in copy_table_queries:
@@ -29,7 +30,7 @@ def main():
     DB_PASSWORD           = config.get("CLUSTER","DB_PASSWORD")
     DB_PORT               = config.get("CLUSTER","DB_PORT")
     DB_CLUSTER_IDENTIFIER = config.get("CLUSTER","DB_CLUSTER_IDENTIFIER")
-    REGION_NAME           = config.get("AWS", "REGION_NAME")
+    REGION_NAME           = config.get("CLUSTER", "REGION_NAME")
     # Get ENDPOINT 
     redshift = boto3.client('redshift',
                            region_name=REGION_NAME,

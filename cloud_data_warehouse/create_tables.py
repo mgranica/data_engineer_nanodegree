@@ -1,6 +1,11 @@
 import configparser
 import psycopg2
 from sql_queries import create_table_queries, drop_table_queries
+import pandas as pd
+import boto3
+import json
+import os
+
 
 
 def drop_tables(cur, conn):
@@ -28,7 +33,7 @@ def main():
     DB_PASSWORD           = config.get("CLUSTER","DB_PASSWORD")
     DB_PORT               = config.get("CLUSTER","DB_PORT")
     DB_CLUSTER_IDENTIFIER = config.get("CLUSTER","DB_CLUSTER_IDENTIFIER")
-    REGION_NAME           = config.get("AWS", "REGION_NAME")
+    REGION_NAME           = config.get("CLUSTER", "REGION_NAME")
     # Get ENDPOINT 
     redshift = boto3.client('redshift',
                            region_name=REGION_NAME,
