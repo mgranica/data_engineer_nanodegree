@@ -50,7 +50,9 @@ The log files in the dataset you'll be working with are partitioned by year and 
 ---
 
 Clone the repository
-
+```
+  git clone https://github.com/mgranica/data_engineer_nanodegree.git
+```
 
 ## Usage
 ---
