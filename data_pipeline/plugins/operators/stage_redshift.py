@@ -12,6 +12,7 @@ class StageToRedshiftOperator(BaseOperator):
         ACCESS_KEY_ID '{}'
         SECRET_ACCESS_KEY '{}'
         json '{}'
+        REGION 'us-west-2'
     """
 
     @apply_defaults

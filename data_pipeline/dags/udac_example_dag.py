@@ -5,7 +5,9 @@ from airflow.operators.postgres_operator import PostgresOperator
 from airflow.operators.dummy_operator import DummyOperator
 from airflow.operators import (StageToRedshiftOperator, LoadFactOperator,
                                 LoadDimensionOperator, DataQualityOperator)
-from helpers import SqlQueries
+from helpers import SqlQueries, DataValidation
+
+
 
 create_tables = """
         CREATE TABLE IF NOT EXISTS public.artists (
@@ -96,8 +98,9 @@ create_tables = """
 default_args = {
     'owner': 'Sparkify Admin',
     'start_date': datetime(2019, 1, 12),
-    'retries': 0,
+    'retries': 3,
     'retry_delay': timedelta(minutes=5),
+    'catchup': False,
     'email_on_retry': False,
     'depends_on_past': False,
 }
@@ -185,7 +188,8 @@ run_quality_checks = DataQualityOperator(
     task_id='Run_data_quality_checks',
     dag=dag,
     conn_id="redshift",
-    tables = ["users", "songs", "artists","time", "songplays"]
+    tables=["users", "songs", "artists","time", "songplays"],
+    validations=DataValidation.validations
 )
 
 end_operator = DummyOperator(task_id='Stop_execution',  dag=dag)
